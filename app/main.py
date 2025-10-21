@@ -4,10 +4,10 @@ from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import jwt  # PyJWT
 
-JWT_SECRET = os.getenv("JWT_SIGNING_KEY", "change-me")
+JWT_SECRET = os.getenv("JWT_SIGNING_KEY", "qc_secret_2025")
 JWT_ALG = "HS256"
-ALLOWED_ISS = os.getenv("ALLOWED_ISS", "")
-ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "https://your-wp-site.com")
+ALLOWED_ISS = os.getenv("ALLOWED_ISS", "https://tobenicelife.com")
+ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "https://tobenicelife.com,https://qc-front-cme8.vercel.app")
 
 app = FastAPI(title="QC API")
 
