@@ -7,13 +7,19 @@ import jwt  # PyJWT
 JWT_SECRET = os.getenv("JWT_SIGNING_KEY", "qc_secret_2025")
 JWT_ALG = "HS256"
 ALLOWED_ISS = os.getenv("ALLOWED_ISS", "https://tobenicelife.com")
-ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "https://tobenicelife.com,https://qc-front-cme8.vercel.app")
+
+# 複数ドメインに対応（WP と Vercel をカンマ区切り）
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS",
+    "https://tobenicelife.com,https://qc-front-cme8.vercel.app",
+)
+ORIGIN_LIST = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
 
 app = FastAPI(title="QC API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ALLOWED_ORIGIN],
+    allow_origins=ORIGIN_LIST,      # ← ここがポイント
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
