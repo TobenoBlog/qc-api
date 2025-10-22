@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 from typing import Optional, Dict, Any
 from fastapi import FastAPI, Request, HTTPException, Depends
@@ -67,8 +68,6 @@ FastAPI single-file app to power QC検定2級の計算演習（平均・分散�
 
 ※ 本番では後述の「TODO/拡張案」を参照し、PostgreSQL等への永続化を推奨
 """
-
-from __future__ import annotations
 import os
 import time
 import math
