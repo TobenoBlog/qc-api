@@ -1,81 +1,6 @@
 from __future__ import annotations
-import os
-from typing import Optional, Dict, Any
-from fastapi import FastAPI, Request, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
-import jwt  # PyJWT
-
-JWT_SECRET = os.getenv("JWT_SIGNING_KEY", "qc_secret_2025")
-JWT_ALG = "HS256"
-ALLOWED_ISS = os.getenv("ALLOWED_ISS", "https://tobenicelife.com")
-
-# 複数ドメインに対応（WP と Vercel をカンマ区切り）
-ALLOWED_ORIGINS = os.getenv(
-    "ALLOWED_ORIGINS",
-    "https://tobenicelife.com,https://qc-front-cme8.vercel.app",
-)
-ORIGIN_LIST = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
-
-app = FastAPI(title="QC API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ORIGIN_LIST,      # ← ここがポイント
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-def extract_token(request: Request) -> Optional[str]:
-    auth = request.headers.get("Authorization", "")
-    if auth.lower().startswith("bearer "):
-        return auth.split(" ", 1)[1].strip()
-    return request.query_params.get("jwt")
-
-def verify_jwt(token: str) -> Dict[str, Any]:
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
-        if ALLOWED_ISS and payload.get("iss") != ALLOWED_ISS:
-            raise jwt.InvalidIssuerError("bad iss")
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(401, "Token expired")
-    except jwt.InvalidTokenError as e:
-        raise HTTPException(401, f"Invalid token: {e}")
-
-async def require_user(request: Request) -> Dict[str, Any]:
-    token = extract_token(request)
-    if not token:
-        raise HTTPException(401, "Missing token")
-    return verify_jwt(token)
-
-@app.get("/health")
-def health():
-    return {"ok": True}
-
-@app.get("/practice")
-def practice(user=Depends(require_user)):
-    return {"ok": True, "user": {"id": user.get("sub"), "name": user.get("name")}}
-    """
-QC API - Backend Feature Pack (v1)
-FastAPI single-file app to power QC検定2級の計算演習（平均・分散・相関・回帰・管理図）
-
-- JWT認証（WordPress発行）
-- 問題生成 / 採点 / 進捗保存 の最小構成
-- CORS: 複数オリジン対応
-- レート制限（簡易）
-- メモリ内ストア（Render無料枠でも手軽に試せる）
-
-※ 本番では後述の「TODO/拡張案」を参照し、PostgreSQL等への永続化を推奨
-"""
-import os
-import time
-import math
-import random
-import uuid
-import threading
+import os, time, math, random, uuid, threading
 from typing import Optional, Dict, Any, List, Tuple
-
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, confloat
@@ -87,13 +12,10 @@ import jwt  # PyJWT
 JWT_SECRET = os.getenv("JWT_SIGNING_KEY", "qc_secret_2025")
 JWT_ALG = "HS256"
 ALLOWED_ISS = os.getenv("ALLOWED_ISS", "https://tobenicelife.com")
-# 複数オリジンをカンマ区切りで受け取り、配列化
 ALLOWED_ORIGINS = [o.strip() for o in os.getenv(
     "ALLOWED_ORIGINS",
     "https://tobenicelife.com,https://qc-front-cme8.vercel.app"
 ).split(",") if o.strip()]
-
-# レート制限（簡易）：IPごとに1分あたり N リクエスト
 RATE_LIMIT_PER_MIN = int(os.getenv("RATE_LIMIT_PER_MIN", "120"))
 
 app = FastAPI(title="QC API")
@@ -107,46 +29,46 @@ app.add_middleware(
 )
 
 # ----------------------------------------------------------------------------
-# 認証ヘルパー
+# 認証ヘルパー（Bearer か ?jwt のどちらでもOKに統一）
 # ----------------------------------------------------------------------------
-class JWTPayload(BaseModel):
-    iss: str
-    sub: str
-    exp: int
-    iat: Optional[int] = None
-    name: Optional[str] = None
-    email: Optional[str] = None
-    role: Optional[str] = None
+def _extract_token(req: Request) -> Optional[str]:
+    auth = req.headers.get("Authorization", "")
+    if auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1].strip()
+    # クエリでも受ける
+    q = req.query_params.get("jwt")
+    return q if q else None
 
-
-def decode_and_validate_jwt(token: str) -> JWTPayload:
+def _decode_and_validate(token: str) -> Dict[str, Any]:
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+        if ALLOWED_ISS and payload.get("iss") != ALLOWED_ISS:
+            raise jwt.InvalidIssuerError("bad iss")
+        return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    except jwt.InvalidTokenError as e:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
 
-    try:
-        data = JWTPayload(**payload)
-    except Exception:
-        raise HTTPException(status_code=401, detail="Malformed token payload")
+async def get_current_user(req: Request) -> Dict[str, Any]:
+    token = _extract_token(req)
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing token")
+    return _decode_and_validate(token)
 
-    if data.iss != ALLOWED_ISS:
-        raise HTTPException(status_code=401, detail="Invalid issuer")
-    return data
+# ----------------------------------------------------------------------------
+# ヘルスチェック
+# ----------------------------------------------------------------------------
+@app.get("/health")
+def health():
+    return {"ok": True}
 
-
-def get_bearer_token(req: Request) -> str:
-    auth = req.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
-    return auth[7:]
-
-
-def get_current_user(req: Request) -> JWTPayload:
-    token = get_bearer_token(req)
-    return decode_and_validate_jwt(token)
+# ----------------------------------------------------------------------------
+# ここで /practice を定義（後半のAPIと同じ app にぶら下げる）
+# ----------------------------------------------------------------------------
+@app.get("/practice")
+def practice(user=Depends(get_current_user)):
+    return {"ok": True, "user": {"id": user.get("sub"), "name": user.get("name")}}
 
 # ----------------------------------------------------------------------------
 # レート制限（簡易実装）
