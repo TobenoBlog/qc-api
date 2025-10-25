@@ -85,8 +85,8 @@ def health():
 # ここで /practice を定義（後半のAPIと同じ app にぶら下げる）
 # ----------------------------------------------------------------------------
 @app.get("/practice")
-def practice(user=Depends(get_current_user)):
-    return {"ok": True, "user": {"id": user.get("sub"), "name": user.get("name")}}
+def practice(user: JWTPayload = Depends(get_current_user)):
+    return {"ok": True, "user": {"id": user.sub, "name": user.name}}
 
 # ----------------------------------------------------------------------------
 # レート制限（簡易実装）
@@ -364,9 +364,7 @@ def get_progress(user_id: str) -> ProgressSummary:
 # ----------------------------------------------------------------------------
 # ルーター
 # ----------------------------------------------------------------------------
-@app.get("/health")
-def health():
-    return {"ok": True}
+
 
 
 @app.post("/generate", response_model=GeneratedProblem)
@@ -374,17 +372,16 @@ def generate_endpoint(req: GenerateRequest, request: Request, user: JWTPayload =
     rate_limit(request)
     return build_problem(req, user_id=user.sub)
 
-
 @app.post("/grade", response_model=GradeResult)
 def grade_endpoint(req: GradeRequest, request: Request, user: JWTPayload = Depends(get_current_user)):
     rate_limit(request)
     return grade_answer(req.problem_id, req, user_id=user.sub)
 
-
 @app.get("/progress", response_model=ProgressSummary)
 def progress_endpoint(request: Request, user: JWTPayload = Depends(get_current_user)):
     rate_limit(request)
     return get_progress(user.sub)
+
 
 # ----------------------------------------------------------------------------
 # 起動: uvicorn main:app --host 0.0.0.0 --port 10000
