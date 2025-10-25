@@ -486,4 +486,31 @@ curl -H "Authorization: Bearer $TOKEN" \
 - 管理図：Xbar-R、Xbar-S、c/u管理図、3σ線の算出
 - 採点詳細：丸め規則や有効数字を厳密化
 """
+function qc_app_shortcode($atts) {
+  $atts = shortcode_atts(array(
+    'path'   => '/practice',
+    'height' => '520',
+  ), $atts);
+
+  $base = 'https://qc-front-cme8.vercel.app'; // ← Vercel本番URLに変更
+  $secret = 'qc_secret_2025';                  // ← RenderのJWT_SIGNING_KEYと一致
+  $iss = 'https://tobenicelife.com';           // ← 末尾スラなし
+
+  // --- JWT発行 ---
+  $header = base64_encode(json_encode(['alg'=>'HS256','typ'=>'JWT']));
+  $payload = base64_encode(json_encode([
+    'iss' => $iss,
+    'iat' => time(),
+    'exp' => time() + 3600
+  ]));
+  $signature = base64_encode(
+    hash_hmac('sha256', "$header.$payload", $secret, true)
+  );
+  $jwt = rtrim(strtr("$header.$payload.$signature", '+/', '-_'), '=');
+
+  // --- iframe生成 ---
+  $src = $base . $atts['path'] . '?token=' . urlencode($jwt);
+  return '<iframe src="'.esc_url($src).'" style="width:100%;height:'.$atts['height'].'px;border:0;" allow="cross-origin-isolated"></iframe>';
+}
+add_shortcode('qc_app', 'qc_app_shortcode');
 
