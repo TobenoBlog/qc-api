@@ -50,22 +50,29 @@ def _extract_token(req: Request) -> Optional[str]:
     q = req.query_params.get("jwt")
     return q if q else None
 
-def _decode_and_validate(token: str) -> Dict[str, Any]:
+def _decode_and_validate(token: str) -> JWTPayload:
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
-        if ALLOWED_ISS and payload.get("iss") != ALLOWED_ISS:
-            raise jwt.InvalidIssuerError("bad iss")
-        return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError as e:
         raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
 
-async def get_current_user(req: Request) -> Dict[str, Any]:
+    if ALLOWED_ISS and payload.get("iss") != ALLOWED_ISS:
+        raise HTTPException(status_code=401, detail="Invalid issuer")
+
+    # Pydantic モデルにバリデートして返す
+    try:
+        return JWTPayload(**payload)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Malformed token payload")
+
+async def get_current_user(req: Request) -> JWTPayload:
     token = _extract_token(req)
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
     return _decode_and_validate(token)
+
 
 # ----------------------------------------------------------------------------
 # ヘルスチェック
