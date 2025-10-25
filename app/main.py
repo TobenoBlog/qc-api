@@ -27,6 +27,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+from pydantic import BaseModel
+
+class JWTPayload(BaseModel):
+    iss: str
+    sub: str
+    exp: int
+    iat: Optional[int] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+
 
 # ----------------------------------------------------------------------------
 # 認証ヘルパー（Bearer か ?jwt のどちらでもOKに統一）
