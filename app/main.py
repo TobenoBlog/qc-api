@@ -70,46 +70,6 @@ class GradeOut(BaseModel):
 class ProgressOut(BaseModel):
     ok: bool
 
-
-# --- エンドポイント ---
-@app.post("/generate", response_model=GenerateOut)
-def generate(
-    req: GenerateIn,
-    claims=Depends(get_current_claims),
-    user_id: str = Depends(get_current_user_id),
-):
-    print("✅ Token OK:", claims)
-    return GenerateOut(
-        problems=[
-            Problem(
-                id="q-1",
-                title=f"{req.topic} Lv{req.level} の問題 (user:{user_id})",
-                body="サンプル問題本文"
-            )
-        ]
-    )
-
-@app.post("/grade", response_model=GradeOut)
-def grade(
-    req: GradeIn,
-    claims=Depends(get_current_claims),
-    user_id: str = Depends(get_current_user_id),
-):
-    correct = req.answer.strip() == "1.23"  # 仮の採点
-    feedback = None
-    if not correct:
-        feedback = {"message": "もう一度チャレンジ", "expected": 1.23, "tolerance": 0.05}
-    return GradeOut(correct=correct, feedback=feedback)
-
-@app.post("/progress", response_model=ProgressOut)
-def progress(
-    req: GradeIn,
-    claims=Depends(get_current_claims),
-    user_id: str = Depends(get_current_user_id),
-):
-    # user_id と questionId を保存する処理を入れる
-    return ProgressOut(ok=True)
-
 # ----------------------------------------------------------------------------
 # 認証ヘルパー（Bearer か ?jwt のどちらでもOKに統一）
 # ----------------------------------------------------------------------------
