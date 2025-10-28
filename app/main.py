@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any, List, Tuple
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, confloat
+from .deps import get_current_claims, get_current_user_id
 import jwt  # PyJWT
 # settings.py（既存 main.py に直書きでもOK）
 import os
@@ -28,7 +29,7 @@ app = FastAPI(title="QC API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,6 +45,70 @@ class JWTPayload(BaseModel):
     email: Optional[str] = None
     role: Optional[str] = None
 
+# --- モデル定義 ---
+class GenerateIn(BaseModel):
+    topic: str
+    level: int
+    count: int
+
+class Problem(BaseModel):
+    id: str
+    title: str
+    body: Optional[str] = None
+
+class GenerateOut(BaseModel):
+    problems: List[Problem]
+
+class GradeIn(BaseModel):
+    questionId: str
+    answer: str
+
+class GradeOut(BaseModel):
+    correct: bool
+    feedback: Optional[dict] = None
+
+class ProgressOut(BaseModel):
+    ok: bool
+
+
+# --- エンドポイント ---
+@app.post("/generate", response_model=GenerateOut)
+def generate(
+    req: GenerateIn,
+    claims=Depends(get_current_claims),
+    user_id: str = Depends(get_current_user_id),
+):
+    print("✅ Token OK:", claims)
+    return GenerateOut(
+        problems=[
+            Problem(
+                id="q-1",
+                title=f"{req.topic} Lv{req.level} の問題 (user:{user_id})",
+                body="サンプル問題本文"
+            )
+        ]
+    )
+
+@app.post("/grade", response_model=GradeOut)
+def grade(
+    req: GradeIn,
+    claims=Depends(get_current_claims),
+    user_id: str = Depends(get_current_user_id),
+):
+    correct = req.answer.strip() == "1.23"  # 仮の採点
+    feedback = None
+    if not correct:
+        feedback = {"message": "もう一度チャレンジ", "expected": 1.23, "tolerance": 0.05}
+    return GradeOut(correct=correct, feedback=feedback)
+
+@app.post("/progress", response_model=ProgressOut)
+def progress(
+    req: GradeIn,
+    claims=Depends(get_current_claims),
+    user_id: str = Depends(get_current_user_id),
+):
+    # user_id と questionId を保存する処理を入れる
+    return ProgressOut(ok=True)
 
 # ----------------------------------------------------------------------------
 # 認証ヘルパー（Bearer か ?jwt のどちらでもOKに統一）
