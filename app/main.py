@@ -436,22 +436,123 @@ def get_progress(user_id: str) -> ProgressSummary:
 # ルーター
 # ----------------------------------------------------------------------------
 
+# ===== フロント契約に合わせたAPI（/api/* のプロキシ先想定） =====
+
+from typing import List, Optional
+from pydantic import BaseModel
+
+# フロント契約用DTO
+class FrontGenerateIn(BaseModel):
+    topic: str        # "mean" | "variance" | "correlation" | "pchart" | "regression"
+    level: int        # 1..5 くらい想定（内部では1..3に丸め）
+    count: int        # 1..20
+
+class FrontGeneratedProblem(BaseModel):
+    id: str
+    title: str
+    body: Optional[str] = None
+
+class FrontGenerateOut(BaseModel):
+    problems: List[FrontGeneratedProblem]
+
+class FrontGradeIn(BaseModel):
+    questionId: str
+    answer: str       # 文字列で来る（数値 or "a,b" の可能性）
+
+class FrontGradeOut(BaseModel):
+    correct: bool
+    feedback: Optional[dict] = None
+
+class FrontProgressIn(BaseModel):
+    questionId: str
+
+class FrontProgressOut(BaseModel):
+    ok: bool
 
 
-@app.post("/generate", response_model=GeneratedProblem)
-def generate_endpoint(req: GenerateRequest, request: Request, user: JWTPayload = Depends(get_current_user)):
+def _map_topic_for_engine(front_topic: str) -> str:
+    # フロントの "regression" はエンジン側 "simple_regression"
+    if front_topic == "regression":
+        return "simple_regression"
+    if front_topic == "pchart":
+        return "p_chart"
+    return front_topic  # mean / variance / correlation はそのまま
+
+
+@app.post("/generate", response_model=FrontGenerateOut)
+def generate_endpoint(req: FrontGenerateIn, request: Request, user: JWTPayload = Depends(get_current_user)):
     rate_limit(request)
-    return build_problem(req, user_id=user.sub)
+    # level は内部の 1..3 に丸める（上がってきたら3で頭打ち）
+    lvl = max(1, min(3, int(req.level)))
+    cnt = max(1, min(20, int(req.count)))
 
-@app.post("/grade", response_model=GradeResult)
-def grade_endpoint(req: GradeRequest, request: Request, user: JWTPayload = Depends(get_current_user)):
-    rate_limit(request)
-    return grade_answer(req.problem_id, req, user_id=user.sub)
+    problems: List[FrontGeneratedProblem] = []
+    ptype = _map_topic_for_engine(req.topic)
 
-@app.get("/progress", response_model=ProgressSummary)
-def progress_endpoint(request: Request, user: JWTPayload = Depends(get_current_user)):
+    from pydantic import BaseModel, Field  # 既存の GenerateRequest を使う
+    class _Gen(BaseModel):
+        type: str
+        level: int
+        n: int
+
+    # 1問 = n(データ数)はレベルに応じて適当に（必要ならUIから別指定でもOK）
+    n_data = 12 if ptype in ("mean", "variance", "correlation", "simple_regression") else 8
+
+    for _ in range(cnt):
+        gp = build_problem(
+            _Gen(type=ptype, level=lvl, n=n_data),
+            user_id=user.sub
+        )
+        # フロントの期待形へ整形
+        problems.append(FrontGeneratedProblem(
+            id=gp.problem_id,
+            title=gp.question,
+            body=None  # 問題文に全て含める運用。必要なら補足を入れる
+        ))
+
+    return FrontGenerateOut(problems=problems)
+
+
+@app.post("/grade", response_model=FrontGradeOut)
+def grade_endpoint(req: FrontGradeIn, request: Request, user: JWTPayload = Depends(get_current_user)):
     rate_limit(request)
-    return get_progress(user.sub)
+
+    # 文字列answerを数値 or (a,b) にパース
+    ans_str = (req.answer or "").strip()
+    from pydantic import BaseModel
+    class _Grade(BaseModel):
+        problem_id: str
+        answer_number: Optional[float] = None
+        answer_tuple: Optional[Tuple[float, float]] = None
+
+    payload = _Grade(problem_id=req.questionId)
+
+    if "," in ans_str:
+        # "a,b" 形式 → 回帰の想定
+        try:
+            a_str, b_str = ans_str.split(",", 1)
+            payload.answer_tuple = (float(a_str), float(b_str))
+        except Exception:
+            raise HTTPException(status_code=400, detail="Answer format for regression should be 'a,b'")
+    else:
+        # 単数値
+        try:
+            payload.answer_number = float(ans_str)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Answer must be numeric or 'a,b'")
+
+    r = grade_answer(payload.problem_id, payload, user_id=user.sub)
+
+    fb = {"message": r.feedback, "expected": r.expected, "tolerance": None}
+    return FrontGradeOut(correct=r.correct, feedback=fb)
+
+
+@app.post("/progress", response_model=FrontProgressOut)
+def progress_endpoint(req: FrontProgressIn, request: Request, user: JWTPayload = Depends(get_current_user)):
+    # 今は「採点時に内部ストアに加算」→ ここではOKだけ返す
+    rate_limit(request)
+    _ = req.questionId  # 使わないが契約上受け取る
+    return FrontProgressOut(ok=True)
 
 
 # ----------------------------------------------------------------------------
