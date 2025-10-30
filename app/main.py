@@ -259,59 +259,130 @@ def gen_pairs_with_correlation(n: int, a: float, b: float, noise: float) -> Tupl
     return xs, ys
 
 
-def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
-    level = req.level
-    if req.type == ProblemType.MEAN:
-        xs = gen_numeric_dataset(req.n, mu=50, sigma=10/level)
-        ans = round(mean(xs), 3)
-        tol = 0.5 / level
-        q = f"次のデータの平均値を小数第3位まで求めよ（許容誤差±{tol}）: {xs}"
-        data = {"xs": xs}
-    elif req.type == ProblemType.VARIANCE:
-        xs = gen_numeric_dataset(req.n, mu=60, sigma=12/level)
-        # 分散は母分散（ddof=0）で統一
-        ans = round(variance(xs, ddof=0), 3)
-        tol = 1.0 / level
-        q = f"次のデータの分散（母分散）を小数第3位まで求めよ（許容誤差±{tol}）: {xs}"
-        data = {"xs": xs}
-    elif req.type == ProblemType.CORRELATION:
-        a = round(random.uniform(0.3, 1.2), 2)
-        b = round(random.uniform(-10, 10), 1)
-        noise = 8.0 / level
-        xs, ys = gen_pairs_with_correlation(req.n, a, b, noise)
-        ans = round(correlation(xs, ys), 3)
-        tol = 0.05 / level
-        q = "次のデータの相関係数 r を小数第3位まで求めよ（許容誤差±{tol}）".format(tol=tol)
-        data = {"xs": xs, "ys": ys}
-    elif req.type == ProblemType.REGRESSION:
-        a_true = round(random.uniform(0.2, 1.5), 2)
-        b_true = round(random.uniform(-20, 20), 1)
-        noise = 10.0 / level
-        xs, ys = gen_pairs_with_correlation(req.n, a_true, b_true, noise)
-        a_hat, b_hat = simple_regression(xs, ys)
-        ans = (round(a_hat, 3), round(b_hat, 3))
-        tol = 0.1 / level
-        q = "次のデータに対して最小二乗法による単回帰直線 y = a x + b を推定せよ（a, b を小数第3位まで。各許容誤差±{tol}）".format(tol=tol)
-        data = {"xs": xs, "ys": ys}
-    elif req.type == ProblemType.P_CHART:
-        # p管理図：各サンプルのnは10〜100の可変、総数と不良数
-        groups = []
-        base_p = random.uniform(0.02, 0.12)
-        for _ in range(req.n):
-            n_i = random.randint(25, 120)
-            defects = sum(1 for _ in range(n_i) if random.random() < base_p)
-            groups.append({"n": n_i, "defects": defects})
-        # 総計
-        N = sum(g["n"] for g in groups)
-        D = sum(g["defects"] for g in groups)
-        pbar = D / N if N else 0.0
-        ans = round(pbar, 4)
-        tol = 0.01 / max(1, level)
-        q = "次の検査データから p管理図の中心線 p̄ を小数第4位まで求めよ（許容誤差±{tol}）".format(tol=tol)
-        data = {"groups": groups}
-    else:
-        raise HTTPException(status_code=400, detail="Unsupported problem type")
+# ----------------------------------------------------------------------------
+# 問題生成メイン関数（全5カテゴリ対応・有効数字2桁版）
+# ----------------------------------------------------------------------------
 
+def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
+    level = max(1, min(3, int(req.level)))
+
+    # ====== 平均 ======
+    if req.type == ProblemType.MEAN:
+        n = random.randint(8, 12)
+        if level == 1:
+            xs = [round(random.randint(45, 55), 2) for _ in range(n)]
+        elif level == 2:
+            xs = [round(random.gauss(50, 1.0), 2) for _ in range(n)]
+        else:
+            xs = [round(random.gauss(50, 2.0), 2) for _ in range(n)]
+            xs[random.randint(0, n - 1)] = round(random.uniform(60, 70), 2)
+
+        ans = round(mean(xs), 2)
+        tol = 0.05
+        q = f"次のデータの平均値を小数第2位まで求めよ（許容誤差±{tol}）: {xs}"
+        data = {"xs": xs}
+
+    # ====== 分散 ======
+    elif req.type == ProblemType.VARIANCE:
+        n = random.randint(6, 10)
+        if level == 1:
+            xs = [round(random.gauss(50, 0.5), 2) for _ in range(n)]
+        elif level == 2:
+            xs = [round(random.gauss(50, 1.2), 2) for _ in range(n)]
+        else:
+            xs = [round(random.gauss(50, 1.2), 2) for _ in range(n)]
+            xs[random.randint(0, n - 1)] = round(random.uniform(60, 70), 2)
+
+        ans = round(variance(xs, ddof=0), 2)
+        tol = 0.05
+        q = f"次のデータの母分散を小数第2位まで求めよ（許容誤差±{tol}）: {xs}"
+        data = {"xs": xs}
+
+    # ====== 相関 ======
+    elif req.type == ProblemType.CORRELATION:
+        if level == 1:
+            r_target = random.uniform(0.85, 0.95)
+        elif level == 2:
+            r_target = -random.uniform(0.55, 0.75)
+        else:
+            r_abs = random.uniform(0.20, 0.40)
+            r_target = r_abs if random.random() < 0.5 else -r_abs
+
+        n = random.randint(8, 12)
+        xs = [round(random.uniform(10, 90), 2) for _ in range(n)]
+        ys = [round(0.8 * x + random.gauss(0, 10 / level), 2) for x in xs]
+        ans = round(correlation(xs, ys), 2)
+        tol = 0.02
+        q = (
+            f"次のデータの相関係数 r を小数第2位まで求めよ（許容誤差±{tol}）。\n"
+            f"xs = {xs}\nys = {ys}"
+        )
+        data = {"xs": xs, "ys": ys}
+
+    # ====== 単回帰 ======
+    elif req.type == ProblemType.REGRESSION:
+        if level == 1:
+            a = round(random.uniform(0.8, 1.2), 2)
+            b = round(random.uniform(-5, 5), 1)
+            noise = 3.0
+        elif level == 2:
+            a = round(random.uniform(0.4, 1.0), 2)
+            b = round(random.uniform(-10, 10), 1)
+            noise = 8.0
+        else:
+            a = round(random.uniform(-1.0, -0.3), 2) if random.random() < 0.5 else round(random.uniform(0.3, 1.2), 2)
+            b = round(random.uniform(-20, 20), 1)
+            noise = 12.0
+
+        n = random.randint(8, 12)
+        xs = [round(random.uniform(10, 90), 2) for _ in range(n)]
+        ys = [round(a * x + b + random.gauss(0, noise), 2) for x in xs]
+        a_hat, b_hat = simple_regression(xs, ys)
+
+        ans = (round(a_hat, 2), round(b_hat, 2))
+        tol = 0.05
+        q = (
+            f"次のデータに対して、最小二乗法により単回帰直線 y = a x + b を求めよ。\n"
+            f"（a, b を小数第2位まで求め、各許容誤差±{tol}）\n"
+            f"xs = {xs}\nys = {ys}"
+        )
+        data = {"xs": xs, "ys": ys}
+
+    # ====== p管理図 ======
+    elif req.type == ProblemType.P_CHART:
+        if level == 1:
+            base_p = random.uniform(0.03, 0.06)
+            n_samples = random.randint(5, 7)
+        elif level == 2:
+            base_p = random.uniform(0.04, 0.08)
+            n_samples = random.randint(6, 9)
+        else:
+            base_p = random.uniform(0.05, 0.10)
+            n_samples = random.randint(7, 10)
+
+        groups = []
+        for _ in range(n_samples):
+            n_i = random.randint(25, 150)
+            p_i = max(0.0, min(1.0, random.gauss(base_p, 0.015 * level)))
+            defects = max(0, int(round(n_i * p_i)))
+            groups.append({"n": n_i, "defects": defects})
+
+        total_n = sum(g["n"] for g in groups)
+        total_d = sum(g["defects"] for g in groups)
+        pbar = round(total_d / total_n, 2)
+        tol = 0.01
+        q = (
+            f"次の検査データから p管理図の中心線 p̄ を小数第2位まで求めよ。\n"
+            f"（許容誤差±{tol}）\n" +
+            "\n".join([f"サンプル{i+1}: 検査数={g['n']}, 不良数={g['defects']}" for i, g in enumerate(groups)])
+        )
+        data = {"groups": groups}
+        ans = pbar
+
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported problem type: {req.type}")
+
+    # ====== 共通保存処理 ======
     problem_id = str(uuid.uuid4())
     with _store_lock:
         _problems[problem_id] = {
@@ -323,6 +394,7 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
             "created_at": time.time(),
             "user_id": user_id,
         }
+
     return GeneratedProblem(problem_id=problem_id, type=req.type, question=q, data=data, tolerance=tol)
 
 # ----------------------------------------------------------------------------
