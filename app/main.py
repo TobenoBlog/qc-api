@@ -176,6 +176,7 @@ class GradeResult(BaseModel):
     expected: Any
     score: float
     feedback: str
+    explanation: Optional[str] = None
 
 
 class ProgressSummary(BaseModel):
