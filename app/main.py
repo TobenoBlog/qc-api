@@ -268,20 +268,42 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
     level = max(1, min(3, int(req.level)))
 
     # ====== 平均 ======
-    if req.type == ProblemType.MEAN:
-        n = random.randint(8, 12)
-        if level == 1:
-            xs = [round(random.randint(20, 30), 1) for _ in range(n)]
-        elif level == 2:
-            xs = [round(random.gauss(50, 1.0), 2) for _ in range(n)]
-        else:
-            xs = [round(random.gauss(50, 2.0), 2) for _ in range(n)]
-            xs[random.randint(0, n - 1)] = round(random.uniform(60, 70), 2)
+    # ====== 平均 ======
+if req.type == ProblemType.MEAN:
+    # ★ 出題サイズ（データ個数）
+    #   レベル別にコントロール。電卓前提なら 8〜12 が実用的。
+    n = {
+        1: random.randint(8, 10),
+        2: random.randint(9, 12),
+        3: random.randint(10, 12),
+    }[level]
 
-        ans = round(mean(xs), 1)
-        tol = 0.05
-        q = f"次のデータの平均値を小数第1位まで求めよ（許容誤差±{tol}）: {xs}"
-        data = {"xs": xs}
+    # ★ データの値域と散らし方（有効数字2桁で小数第2位に丸め）
+    #   例）平均が 50 前後になるようにしつつ、Lv3 で外れ値を混ぜるオプション
+    base_mu = 50.0
+    sigma = {1: 0.8, 2: 1.5, 3: 2.0}[level]  # 散らし（標準偏差の目安）
+    xs = [round(random.gauss(base_mu, sigma), 2) for _ in range(n)]
+
+    # （任意）Lv3は外れ値を1つ混ぜて平均の「頑健さ」訓練に使う
+    if level == 3 and random.random() < 0.7:
+        idx = random.randrange(n)
+        xs[idx] = round(random.uniform(60, 70), 2)
+
+    # ★ 正答（平均値）と許容誤差
+    #   電卓運用：有効数字2桁 → 表示・採点は小数第2位まで
+    ans = round(sum(xs) / len(xs), 2)
+
+    # ★ 許容誤差：±0.05（要件に合わせてここで調整）
+    tol = 0.05
+
+    # ★ 出題文（見せ方はここで調整）
+    q = (
+        f"次のデータの平均値 x̄ を小数第2位まで求めよ（許容誤差±{tol}）。\n"
+        f"データ（n={n}）：{xs}"
+    )
+
+    data = {"xs": xs}
+
 
     # ====== 分散 ======
     elif req.type == ProblemType.VARIANCE:
