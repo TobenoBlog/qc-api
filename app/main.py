@@ -279,19 +279,19 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
         # ★ データの値域と散らし方（有効数字2桁で小数第2位に丸め）
         base_mu = 50.0
         sigma = {1: 0.8, 2: 1.5, 3: 2.0}[level]
-        xs = [round(random.gauss(base_mu, sigma), 2) for _ in range(n)]
+        xs = [round(random.gauss(base_mu, sigma), 1) for _ in range(n)]
 
         # Lv3 は外れ値混入
         if level == 3 and random.random() < 0.7:
             idx = random.randrange(n)
-            xs[idx] = round(random.uniform(60, 70), 2)
+            xs[idx] = round(random.uniform(60, 70), 1)
 
         # ★ 正答（平均値）と許容誤差
-        ans = round(sum(xs) / len(xs), 2)
+        ans = round(sum(xs) / len(xs), 1)
         tol = 0.05
 
         q = (
-            f"次のデータの平均値 x̄ を小数第2位まで求めよ（許容誤差±{tol}）。\n"
+            f"次のデータの平均値 x̄ を小数第1位まで求めよ（許容誤差±{tol}）。\n"
             f"データ（n={n}）：{xs}"
         )
         data = {"xs": xs}
