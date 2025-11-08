@@ -251,12 +251,12 @@ def simple_regression(xs: List[float], ys: List[float]) -> Tuple[float, float]:
 # ----------------------------------------------------------------------------
 
 def gen_numeric_dataset(n: int, mu: float, sigma: float) -> List[float]:
-    return [round(random.gauss(mu, sigma), 1) for _ in range(n)]
+    return [round(random.gauss(mu, sigma), 2) for _ in range(n)]
 
 
 def gen_pairs_with_correlation(n: int, a: float, b: float, noise: float) -> Tuple[List[float], List[float]]:
-    xs = [round(random.uniform(10, 90), 1) for _ in range(n)]
-    ys = [round(a * x + b + random.gauss(0, noise), 1) for x in xs]
+    xs = [round(random.uniform(10, 90), 2) for _ in range(n)]
+    ys = [round(a * x + b + random.gauss(0, noise), 2) for x in xs]
     return xs, ys
 
 
