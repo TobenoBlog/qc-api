@@ -476,12 +476,16 @@ explanation = ""
 if ptype == ProblemType.MEAN:
     xs = rec["data"]["xs"]
     n = len(xs)
-    m = mean(xs)
+    sx = round(sum(xs), 2)
+    m = round(sx / n, 2)  # 小数第2位を基準に見せる
+
+    # 見せる式：電卓で追えるように Σx と n をまず表示
     explanation = (
-        f"平均値の公式：\\n"
-        f"  x̄ = (Σx) / n\\n"
-        f"  Σx = {round(sum(xs), 2)}, n = {n}\\n"
-        f"  よって x̄ = {round(sum(xs), 2)} / {n} = {round(m, 3)}"
+        "平均の定義：\n"
+        "  x̄ = (Σx) / n\n"
+        f"ここでは Σx = {sx},  n = {n}\n"
+        f"よって x̄ = {sx} / {n} = {m}\n"
+        "（小数第2位に四捨五入）"
     )
 
 elif ptype == ProblemType.VARIANCE:
