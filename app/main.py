@@ -462,42 +462,42 @@ def grade_answer(problem_id: str, user_answer: GradeRequest, user_id: str) -> Gr
         tp["total"] += 1
         if correct:
             tp["correct"] += 1
-explanation = ""
+        explanation = ""
 
-if ptype == ProblemType.MEAN:
-    xs = rec["data"]["xs"]
-    n = len(xs)
-    sx = round(sum(xs), 2)
-    m = round(sx / n, 2)  # 小数第2位を基準に見せる
+        if ptype == ProblemType.MEAN:
+            xs = rec["data"]["xs"]
+            n = len(xs)
+            sx = round(sum(xs), 2)
+            m = round(sx / n, 2)  # 小数第2位を基準に見せる
 
-    # 見せる式：電卓で追えるように Σx と n をまず表示
-    explanation = (
-        "平均の定義：\n"
-        "  x̄ = (Σx) / n\n"
-        f"ここでは Σx = {sx},  n = {n}\n"
-        f"よって x̄ = {sx} / {n} = {m}\n"
-        "（小数第2位に四捨五入）"
-    )
-
-elif ptype == ProblemType.VARIANCE:
-    explanation = "分散 = Σ(x−x̄)² / n です。"
-
-elif ptype == ProblemType.CORRELATION:
-    explanation = "相関係数 r = Σ(x−x̄)(y−ȳ) / √(Σ(x−x̄)²Σ(y−ȳ)²) です。"
-
-elif ptype == ProblemType.REGRESSION:
-    explanation = "回帰直線 y = a x + b（a:傾き, b:切片）です。"
-
-elif ptype == ProblemType.P_CHART:
-    explanation = "p̄ = 総不良数 ÷ 総サンプル数 で求めます。"
-
-return GradeResult(
-    correct=correct,
-    expected=expected,
-    score=score,
-    feedback=feedback,
-    explanation=explanation,  # ← ★追加
-)
+            # 見せる式：電卓で追えるように Σx と n をまず表示
+            explanation = (
+                "平均の定義：\n"
+                "  x̄ = (Σx) / n\n"
+                f"ここでは Σx = {sx},  n = {n}\n"
+                f"よって x̄ = {sx} / {n} = {m}\n"
+                "（小数第2位に四捨五入）"
+            )
+        
+        elif ptype == ProblemType.VARIANCE:
+            explanation = "分散 = Σ(x−x̄)² / n です。"
+        
+        elif ptype == ProblemType.CORRELATION:
+            explanation = "相関係数 r = Σ(x−x̄)(y−ȳ) / √(Σ(x−x̄)²Σ(y−ȳ)²) です。"
+        
+        elif ptype == ProblemType.REGRESSION:
+            explanation = "回帰直線 y = a x + b（a:傾き, b:切片）です。"
+        
+        elif ptype == ProblemType.P_CHART:
+            explanation = "p̄ = 総不良数 ÷ 総サンプル数 で求めます。"
+        
+        return GradeResult(
+            correct=correct,
+            expected=expected,
+            score=score,
+            feedback=feedback,
+            explanation=explanation,  # ← ★追加
+        )
 
 #    return GradeResult(correct=correct, expected=expected, score=score, feedback=feedback)
 
