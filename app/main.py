@@ -278,9 +278,9 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
             xs = [round(random.gauss(50, 2.0), 2) for _ in range(n)]
             xs[random.randint(0, n - 1)] = round(random.uniform(60, 70), 2)
 
-        ans = round(mean(xs), 2)
+        ans = round(mean(xs), 1)
         tol = 0.05
-        q = f"次のデータの平均値を小数第2位まで求めよ（許容誤差±{tol}）: {xs}"
+        q = f"次のデータの平均値を小数第1位まで求めよ（許容誤差±{tol}）: {xs}"
         data = {"xs": xs}
 
     # ====== 分散 ======
