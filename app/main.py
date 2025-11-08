@@ -271,7 +271,7 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
     if req.type == ProblemType.MEAN:
         n = random.randint(8, 12)
         if level == 1:
-            xs = [round(random.randint(45, 55), 2) for _ in range(n)]
+            xs = [round(random.randint(20, 30), 1) for _ in range(n)]
         elif level == 2:
             xs = [round(random.gauss(50, 1.0), 2) for _ in range(n)]
         else:
