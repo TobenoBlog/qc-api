@@ -279,12 +279,12 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
         # ★ データの値域と散らし方（有効数字2桁で小数第2位に丸め）
         base_mu = 50.0
         sigma = {1: 0.8, 2: 1.5, 3: 2.0}[level]
-        xs = [round(random.gauss(base_mu, sigma), 1) for _ in range(n)]
+        xs = [round(random.gauss(base_mu, sigma), 0) for _ in range(n)]
 
         # Lv3 は外れ値混入
         if level == 3 and random.random() < 0.7:
             idx = random.randrange(n)
-            xs[idx] = round(random.uniform(60, 70), 1)
+            xs[idx] = round(random.uniform(60, 70), 0)
 
         # ★ 正答（平均値）と許容誤差
         ans = round(sum(xs) / len(xs), 1)
