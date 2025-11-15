@@ -271,15 +271,15 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
     if req.type == ProblemType.MEAN:
         # ★ 出題サイズ（データ個数）
         n = {
-            1: random.randint(8, 10),
-            2: random.randint(9, 12),
+            1: random.randint(4, 6),
+            2: random.randint(8, 12),
             3: random.randint(10, 12),
         }[level]
 
         # ★ データの値域と散らし方（有効数字2桁で小数第2位に丸め）
         base_mu = 50.0
         sigma = {1: 0.8, 2: 1.5, 3: 2.0}[level]
-        xs = [round(random.gauss(base_mu, sigma), 1) for _ in range(n)]
+        xs = [round(random.gauss(base_mu, sigma), 0) for _ in range(n)]
 
         # Lv3 は外れ値混入
         if level == 3 and random.random() < 0.7:
@@ -300,12 +300,12 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
     elif req.type == ProblemType.VARIANCE:
         n = random.randint(6, 10)
         if level == 1:
-            xs = [round(random.gauss(50, 0.5), 2) for _ in range(n)]
+            xs = [round(random.gauss(50, 0.5), 0) for _ in range(n)]
         elif level == 2:
-            xs = [round(random.gauss(50, 1.2), 2) for _ in range(n)]
+            xs = [round(random.gauss(50, 1.2), 0) for _ in range(n)]
         else:
-            xs = [round(random.gauss(50, 1.2), 2) for _ in range(n)]
-            xs[random.randint(0, n - 1)] = round(random.uniform(60, 70), 2)
+            xs = [round(random.gauss(50, 1.2), 0) for _ in range(n)]
+            xs[random.randint(0, n - 1)] = round(random.uniform(60, 70), 0)
 
         ans = round(variance(xs, ddof=0), 2)
         tol = 0.05
