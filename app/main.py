@@ -322,8 +322,8 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
             r_abs = random.uniform(0.20, 0.40)
             r_target = r_abs if random.random() < 0.5 else -r_abs
 
-        n = random.randint(8, 12)
-        xs = [round(random.uniform(10, 90), 2) for _ in range(n)]
+        n = random.randint(3, 5)
+        xs = [round(random.uniform(10, 90)) for _ in range(n)]
         ys = [round(0.8 * x + random.gauss(0, 10 / level)) for x in xs]
         ans = round(correlation(xs, ys))
         tol = 0.02
