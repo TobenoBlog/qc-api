@@ -298,13 +298,13 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
 
     # ====== 分散 ======
     elif req.type == ProblemType.VARIANCE:
-        n = random.randint(6, 10)
+        n = random.randint(5, 7)
         if level == 1:
             xs = [round(random.gauss(50, 0.5)) for _ in range(n)]
         elif level == 2:
-            xs = [round(random.gauss(50, 1.2)) for _ in range(n)]
+            xs = [round(random.gauss(50, 2.0)) for _ in range(n)]
         else:
-            xs = [round(random.gauss(50, 1.2)) for _ in range(n)]
+            xs = [round(random.gauss(50, 2.5)) for _ in range(n)]
             xs[random.randint(0, n - 1)] = round(random.uniform(60, 70))
 
         ans = round(variance(xs, ddof=0),2)
