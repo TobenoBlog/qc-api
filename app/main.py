@@ -307,7 +307,7 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
             xs = [round(random.gauss(50, 1.2)) for _ in range(n)]
             xs[random.randint(0, n - 1)] = round(random.uniform(60, 70))
 
-        ans = round(variance(xs, ddof=0))
+        ans = round(variance(xs, ddof=0),2)
         tol = 0.05
         q = f"次のデータの母分散を小数第2位まで求めよ（許容誤差±{tol}）: {xs}"
         data = {"xs": xs}
