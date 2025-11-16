@@ -278,7 +278,7 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
 
         # ★ データの値域と散らし方（有効数字2桁で小数第2位に丸め）
         base_mu = 50
-        sigma = {1: 2.0, 2: 4.0, 3: 8.0}[level]
+        sigma = {1: 10.0, 2: 10.0, 3: 10.0}[level]
         xs = [round(random.gauss(base_mu, sigma)) for _ in range(n)]
 
         # Lv3 は外れ値混入
