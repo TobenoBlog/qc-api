@@ -277,17 +277,17 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
         }[level]
 
         # ★ データの値域と散らし方（有効数字2桁で小数第2位に丸め）
-        base_mu = 50.0
+        base_mu = 50
         sigma = {1: 0.8, 2: 1.5, 3: 2.0}[level]
-        xs = [round(random.gauss(base_mu, sigma), 0) for _ in range(n)]
+        xs = [round(random.gauss(base_mu, sigma)) for _ in range(n)]
 
         # Lv3 は外れ値混入
         if level == 3 and random.random() < 0.7:
             idx = random.randrange(n)
-            xs[idx] = round(random.uniform(60, 70), 0)
+            xs[idx] = round(random.uniform(60, 70))
 
         # ★ 正答（平均値）と許容誤差
-        ans = round(sum(xs) / len(xs), 0)
+        ans = round(sum(xs) / len(xs))
         tol = 0.05
 
         q = (
@@ -300,14 +300,14 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
     elif req.type == ProblemType.VARIANCE:
         n = random.randint(6, 10)
         if level == 1:
-            xs = [round(random.gauss(50, 0.5), 0) for _ in range(n)]
+            xs = [round(random.gauss(50, 0.5)) for _ in range(n)]
         elif level == 2:
-            xs = [round(random.gauss(50, 1.2), 0) for _ in range(n)]
+            xs = [round(random.gauss(50, 1.2)) for _ in range(n)]
         else:
-            xs = [round(random.gauss(50, 1.2), 0) for _ in range(n)]
-            xs[random.randint(0, n - 1)] = round(random.uniform(60, 70), 0)
+            xs = [round(random.gauss(50, 1.2)) for _ in range(n)]
+            xs[random.randint(0, n - 1)] = round(random.uniform(60, 70))
 
-        ans = round(variance(xs, ddof=0), 0)
+        ans = round(variance(xs, ddof=0))
         tol = 0.05
         q = f"次のデータの母分散を小数第2位まで求めよ（許容誤差±{tol}）: {xs}"
         data = {"xs": xs}
@@ -324,8 +324,8 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
 
         n = random.randint(8, 12)
         xs = [round(random.uniform(10, 90), 2) for _ in range(n)]
-        ys = [round(0.8 * x + random.gauss(0, 10 / level), 2) for x in xs]
-        ans = round(correlation(xs, ys), 2)
+        ys = [round(0.8 * x + random.gauss(0, 10 / level)) for x in xs]
+        ans = round(correlation(xs, ys))
         tol = 0.02
         q = (
             f"次のデータの相関係数 r を小数第2位まで求めよ（許容誤差±{tol}）。\n"
@@ -336,24 +336,24 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
     # ====== 単回帰 ======
     elif req.type == ProblemType.REGRESSION:
         if level == 1:
-            a = round(random.uniform(0.8, 1.2), 2)
-            b = round(random.uniform(-5, 5), 1)
+            a = round(random.uniform(0.8, 1.2))
+            b = round(random.uniform(-5, 5))
             noise = 3.0
         elif level == 2:
-            a = round(random.uniform(0.4, 1.0), 2)
-            b = round(random.uniform(-10, 10), 1)
+            a = round(random.uniform(0.4, 1.0))
+            b = round(random.uniform(-10, 10))
             noise = 8.0
         else:
-            a = round(random.uniform(-1.0, -0.3), 2) if random.random() < 0.5 else round(random.uniform(0.3, 1.2), 2)
-            b = round(random.uniform(-20, 20), 1)
+            a = round(random.uniform(-1.0, -0.3)) if random.random() < 0.5 else round(random.uniform(0.3, 1.2))
+            b = round(random.uniform(-20, 20))
             noise = 12.0
 
         n = random.randint(8, 12)
-        xs = [round(random.uniform(10, 90), 2) for _ in range(n)]
-        ys = [round(a * x + b + random.gauss(0, noise), 2) for x in xs]
+        xs = [round(random.uniform(10, 90)) for _ in range(n)]
+        ys = [round(a * x + b + random.gauss(0, noise)) for x in xs]
         a_hat, b_hat = simple_regression(xs, ys)
 
-        ans = (round(a_hat, 2), round(b_hat, 2))
+        ans = (round(a_hat), round(b_hat))
         tol = 0.05
         q = (
             f"次のデータに対して、最小二乗法により単回帰直線 y = a x + b を求めよ。\n"
@@ -383,7 +383,7 @@ def build_problem(req: GenerateRequest, user_id: str) -> GeneratedProblem:
 
         total_n = sum(g["n"] for g in groups)
         total_d = sum(g["defects"] for g in groups)
-        pbar = round(total_d / total_n, 2)
+        pbar = round(total_d / total_n)
         tol = 0.01
         q = (
             f"次の検査データから p管理図の中心線 p̄ を小数第2位まで求めよ。\n"
